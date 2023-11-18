@@ -13,7 +13,9 @@ if (b > 10) {
 
 while (a > 1) {
   a := a - 1;
-  b := b + 1;
+  if (b < 40) {
+    b := b + 1;
+  }
 };
 
 local c: i8;
