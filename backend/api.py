@@ -64,7 +64,7 @@ class Backend:
   def end_block(self):
     pass
 
-  def break_block(self):
+  def break_block(self, level: int):
     pass
   
   ################################################

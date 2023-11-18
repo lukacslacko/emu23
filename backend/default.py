@@ -32,6 +32,7 @@ class DefaultBackend(Backend):
   def __init__(self):
     self._code = []
     self._stack_ptr = 0
+    self._mem_ptr = 0
     
   def name() -> str:
     return "Default"
@@ -47,6 +48,11 @@ class DefaultBackend(Backend):
     v = DefaultDataLocation(f"stack@{self._stack_ptr}", t)
     self._stack_ptr += v.size()
     self.local_vars.append(v)
+    return v
+  
+  def create_static_var(self, t: Type) -> DefaultDataLocation:
+    v = DefaultDataLocation(f"mem@{self._mem_ptr}", t)
+    self._mem_ptr += v.size()
     return v
   
   def write_to_file(self, filename: str):
@@ -75,10 +81,15 @@ class DefaultBackend(Backend):
       self._dispose_local_var(v)
     
   def end_block(self):
+    self._code.append("set break_counter to 1")
     _end_block = len(self._code)
     for i in range(self._begin_block, self._end_block):
       if "{block_end}" in self._code[i]:
         self._code[i] = self._code[i].format(block_end=_end_block)
     for v in reversed(self._local_vars):
       self._dispose_local_var(v)
-    self._code.append("end block")  
+    self._code.append("set break_counter to break_counter - 1")  
+
+  def break_block(self, level: int):
+    self._code.append(f"set break_counter to {level}")
+    self._code.append("jump to {block_end}")
