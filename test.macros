@@ -1,0 +1,2 @@
+$setmemaddr=lda%1 tas tsc tcrah lda%2 tas tsc tcral
+$ldb=lda%1 tas tsb
