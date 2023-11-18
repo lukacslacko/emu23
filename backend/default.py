@@ -46,6 +46,7 @@ class DefaultBackend(Backend):
   def create_local_var(self, t: Type) -> DefaultDataLocation:
     v = DefaultDataLocation(f"stack@{self._stack_ptr}", t)
     self._stack_ptr += v.size()
+    self.local_vars.append(v)
     return v
   
   def write_to_file(self, filename: str):
@@ -61,6 +62,7 @@ class DefaultBackend(Backend):
   def begin_block(self) -> CodeLocation:
     self._begin_block = len(self._code)
     self._code.append("begin block")
+    self._local_vars = []
     return DefaultCodeLocation(self._begin_block)
 
   def begin_function(self, return_type: Type, args: list[Type]) -> tuple[DataLocation, list[DataLocation]]:
