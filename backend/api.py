@@ -18,11 +18,11 @@ class CodeLocation(Location):
   pass
 
 class DataLocation(Location):
-  typ: Type
+  _typ: Type
 
 class Backend:
   def name() -> str:
-    return "Default"
+    return "???"
 
   ###########################################
   # Methods callable only outside of a block.
@@ -31,7 +31,7 @@ class Backend:
   def link(self):
     pass
 
-  def write_to_file(self):
+  def write_to_file(self, filename: str):
     pass
 
   def REG(self, num: int, type: Type) -> DataLocation:
@@ -47,7 +47,7 @@ class Backend:
   # Methods only callable outside a function.
   ###########################################
 
-  def begin_function(self, return_type: Type, args: list[Type]) -> tuple[DataLocation,list[DataLocation]]:
+  def begin_function(self, return_type: Type, args: list[Type]) -> tuple[CodeLocation, DataLocation, list[DataLocation]]:
     pass
 
   ##########################################
