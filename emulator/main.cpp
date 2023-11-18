@@ -65,7 +65,7 @@ public:
     printf("CZI=%d%d%d PC=%06x PCB=%02x PCH=%02x RA=%06x SB=%02x ISB=%02x SP=%04x FP=%04x r1=%02x r2=%02x r3=%02x r4=%02x r5=%02x r6=%02x r7=%02x A=r%d B=r%d C=%02x int=%02x halted=%d",flagC,flagZ,flagI,PC,PCB,PCH,RA,SB,ISB,SP,FP,r1,r2,r3,r4,r5,r6,r7,rA,rB,rC,intc,halted);
   }
   uint8_t rom[0x8000];
-// private:
+private:
   bool halted,dbg;
   double clockrate;
   uint8_t r0,r1,r2,r3,r4,r5,r6,r7,rC;
@@ -252,63 +252,63 @@ public:
         return 2;}
       case 0x34://shri
         getImm();
-      case 0x34://shr
+      case 0x35://shr
         rC=A>>1;
         flagC=A&1;
         flagZ=!rC;
         return 2;
       case 0x36://rori
         getImm();
-      case 0x35://ror
+      case 0x37://ror
         rC=A>>1|flagC<<7;
         flagC=A&1;
         flagZ=!rC;
         return 2;
-      case 0x36://tcrab
+      case 0x38://tcrab
         RA=RA&0xffff|(uint32_t)rC<<16;
         return 2;
-      case 0x37://trabc
+      case 0x39://trabc
         rC=RA>>16;
         return 2;
-      case 0x38://tcrah
+      case 0x3a://tcrah
         RA=RA&0xff00ff|(uint32_t)rC<<8;
         return 2;
-      case 0x39://trahc
+      case 0x3b://trahc
         rC=RA>>8&0xff;
         return 2;
-      case 0x3a://tcral
+      case 0x3c://tcral
         RA=RA&0xffff00|(uint32_t)rC;
         return 2;
-      case 0x3b://tralc
+      case 0x3d://tralc
         rC=RA&0xff;
         return 2;
-      case 0x3c://jmps
+      case 0x3e://jmps
         PC=PC&0xff0000|(uint32_t)PCH<<8|(uint32_t)rC;
         return 2;
-      case 0x3d://jmpl
+      case 0x3f://jmpl
         PC=(uint32_t)PCB<<16|(uint32_t)PCH<<8|(uint32_t)rC;
         return 2;
-      case 0x3e://calls
+      case 0x40://calls
         push(PC&0xff);
         push(PC>>8&0xff);
         PC=PC&0xff0000|(uint32_t)PCH<<8|(uint32_t)rC;
         return 4;
-      case 0x3f://calll
+      case 0x41://calll
         push(PC&0xff);
         push(PC>>8&0xff);
         push(PC>>16);
         PC=(uint32_t)PCB<<16|(uint32_t)PCH<<8|(uint32_t)rC;
         return 5;
-      case 0x40://rets
+      case 0x42://rets
         PC=PC&0xff0000|(uint32_t)pop()<<8;
         PC|=(uint32_t)pop();
         return 3;
-      case 0x41://retl
+      case 0x43://retl
         PC=(uint32_t)pop()<<16;
         PC|=(uint32_t)pop()<<8;
         PC|=(uint32_t)pop();
         return 4;
-      case 0x42://rti
+      case 0x44://rti
         if (flagI) {
           PC=(uint32_t)pop()<<16;
           PC|=(uint32_t)pop()<<8;
@@ -319,90 +319,98 @@ public:
           fault(1,true);
           return 1;
         }
-      case 0x43://brk
+      case 0x45://brk
         if (!flagI) {
           fault(2,true);
           return 1;
         }
         dbg=true;
         return 2;
-      case 0x44://sys
+      case 0x46://sys
         fault(0,true);
         return 1;
-      case 0x45://sicc
+      case 0x47://sicc
         if (!flagC) {
           PC+=2;
+          PC&=0xffffff;
           return 3;
         }
         return 2;
-      case 0x46://scc
+      case 0x48://scc
         if (!flagC) {
           PC++;
+          PC&=0xffffff;
         }
         return 2;
-      case 0x47://scs
+      case 0x49://scs
         if (flagC) {
           PC++;
+          PC&=0xffffff;
         }
         return 2;
-      case 0x48://sics
+      case 0x4a://sics
         if (flagC) {
           PC+=2;
+          PC&=0xffffff;
           return 3;
         }
         return 2;
-      case 0x49://sieq
+      case 0x4b://sieq
         if (flagZ) {
           PC+=2;
+          PC&=0xffffff;
           return 3;
         }
         return 2;
-      case 0x4a://seq
+      case 0x4c://seq
         if (flagZ) {
           PC++;
+          PC&=0xffffff;
         }
         return 2;
-      case 0x4b://sine
+      case 0x4d://sine
         if (!flagZ) {
           PC+=2;
+          PC&=0xffffff;
           return 3;
         }
         return 2;
-      case 0x4c://sne
+      case 0x4e://sne
         if (!flagZ) {
           PC++;
+          PC&=0xffffff;
         }
         return 2;
-      case 0x4d://tic
+      case 0x4f://tic
         if (!flagI) {
           fault(1,true);
           return 1;
         }
         rC=intc;
         return 2;
-      case 0x4e://tami
+      case 0x50://tami
         getImm();
-      case 0x4f://tam
+      case 0x51://tam
         write(RA,A);
         return 2;
-      case 0x50://tbmi
+      case 0x52://tbmi
         getImm();
-      case 0x51://tbm
+      case 0x53://tbm
         write(RA,B);
         return 2;
-      case 0x52://tcm
+      case 0x54://tcm
         write(RA,rC);
         return 2;
-      case 0x53://tma
+      case 0x55://tma
         setA(read(RA));
         return 2;
-      case 0x54://tmb
+      case 0x56://tmb
         setB(read(RA));
         return 2;
-      case 0x55://tmc
+      case 0x57://tmc
         rC=read(RA);
         return 2;
-      case 0x56://hlt
+      case 0x58://hlt
         if (!flagI) {
           fault(1,true);
           return 1;
@@ -410,75 +418,79 @@ public:
         halted=true;
         dbg=true;
         return 2;
-      case 0x57://reset
+      case 0x59://reset
         if (!flagI) {
           fault(1,true);
           return 1;
         }
         reset();
         return 2;
-      case 0x58://cmpi
+      case 0x5a://cmpi
         getImm();
-      case 0x59://cmp
+      case 0x5b://cmp
         flagZ=A==B;
         flagC=B>A;
         return 2;
-      case 0x5a://tsbai
+      case 0x5c://tsbai
         getImm();
-      case 0x5b://tsba
+      case 0x5d://tsba
         setA(read(indstack(B)));
         return 2;
-      case 0x5c://tcsbi
+      case 0x5e://tcsbi
         getImm();
-      case 0x5d://tcsb
+      case 0x5f://tcsb
         write(indstack(B),rC);
         return 2;
-      case 0x5e://tasbi
+      case 0x60://tasbi
         getImm();
-      case 0x5f://tasb
+      case 0x61://tasb
         write(indstack(B),A);
         return 2;
-      case 0x60://tsbci
+      case 0x62://tsbci
         getImm();
-      case 0x61://tsbc
+      case 0x63://tsbc
         rC=read(indstack(B));
         return 2;
-      case 0x62://nop
+      case 0x64://nop
         return 2;
-      case 0x63://tcsph
+      case 0x65://tcsph
         SP=SP&0xff|(uint16_t)rC<<8;
         return 2;
-      case 0x64://tcspl
+      case 0x66://tcspl
         SP=SP&0xff00|(uint16_t)rC;
         return 2;
-      case 0x65://tsphc
+      case 0x67://tsphc
         rC=SP>>8;
         return 2;
-      case 0x66://tsplc
+      case 0x68://tsplc
         rC=SP&0xff;
         return 2;
-      case 0x67://tcspb
+      case 0x69://tcspb
         SB=rC;
         return 2;
-      case 0x68://tspbc
+      case 0x6a://tspbc
         rC=SB;
         return 2;
-      case 0x69://tcispb
+      case 0x6b://tcispb
+        if (!flagI) {
+          fault(1);
+          return 2;
+        }
         ISB=rC;
         return 2;
-      case 0x6a://tispbc
+      case 0x6c://tispbc
         rC=ISB;
         return 2;
-      case 0x6b://tcpch
+      case 0x6d://tcpch
         PCH=rC;
         return 2;
-      case 0x6c://tcpcb
+      case 0x6e://tcpcb
         PCB=rC;
         return 2;
-      case 0x6d://tpchc
+      case 0x6f://tpchc
         rC=PCH;
         return 2;
-      case 0x6e://tpcbc
+      case 0x70://tpcbc
         rC=PCB;
         return 2;
     }
@@ -766,49 +778,7 @@ int main(int argc, char** argv) {
   CPU cpu = CPU(100,true);
   time_t lt = time(nullptr);
   time_t nt;
-  if (argc < 2) return 1;
-  std::ifstream infile(argv[1], std::ios::binary);
-  char buf[0x100];
-  infile.read(buf,14);
-  if (!infile) return 1;
-  if (buf[0]!=0xfe||buf[1]!=0xed) {
-    std::cout << "wrong magic" << std::endl;
-    return 1;
-  }
-  uint32_t code_size=(uint32_t)buf[2]<<16|(uint32_t)buf[3]<<8|(uint32_t)buf[4];
-  uint32_t rodata_size=(uint32_t)buf[5]<<16|(uint32_t)buf[6]<<8|(uint32_t)buf[7];
-  uint32_t data_size=(uint32_t)buf[8]<<16|(uint32_t)buf[9]<<8|(uint32_t)buf[10];
-  uint32_t entry=(uint32_t)buf[11]<<16|(uint32_t)buf[12]<<8|(uint32_t)buf[13];
-  // identity map atr
-  for (uint16_t i=0;i<0x2000;i++) {
-    cpu.atr[i<<1]=i&0xff;
-    cpu.atr[(i<<1)+1]=i>>8;
-  }
-  cpu.SP=0xffff;
-  cpu.SB=0x80;
-  for (uint16_t i=1;i<64;i++) {
-    cpu.atr[(i<<1)+1]|=0xc0; // set stack to RW
-  }
-  for (uint16_t i=65;i<66+(code_size>>10);i++) {
-    cpu.atr[(i<<1)+1]|=0x20; // set code to X
-  }
-  for (uint16_t i=66+(code_size>>10);i<67+(rodata_size>>10)+(code_size>>10);i++) {
-    cpu.atr[(i<<1)+1]|=0x80; // set rodata to R
-  }
-  for (uint16_t i=67+(rodata_size>>10)+(code_size>>10);i<68+(data_size>>10)+(rodata_size>>10)+(code_size>>10);i++) {
-    cpu.atr[(i<<1)+1]|=0xc0; // set data to RW
-  }
-  cpu.rom[0x80]=0x43;
-  cpu.rom[0x81]=0x42;
-  cpu.rom[0]=0;
-  cpu.rom[1]=0x2a;
-  cpu.rom[2]=entry&0xff;
-  cpu.rom[3]=0x2a;
-  cpu.rom[4]=(entry&0xff00)>>8;
-  cpu.rom[5]=0x2a;
-  cpu.rom[6]=entry>>16;
-  cpu.rom[7]=0x42;
-  for(;;) {
+    for(;;) {
     nt=time(nullptr);
     cpu.run(difftime(nt,lt));
     lt=nt;
