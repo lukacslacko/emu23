@@ -1,6 +1,6 @@
 from enum import Enum
 
-from paren import paren
+from compiler.paren import paren
 
 def find_first(what: str, tokens: list[str]) -> int:
   i=0

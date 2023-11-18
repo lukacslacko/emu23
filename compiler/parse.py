@@ -1,4 +1,4 @@
-from sta import stat
+from compiler.sta import stat
 
 def parse(s: str) -> list[str]:
   if s == "":

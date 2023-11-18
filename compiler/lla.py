@@ -7,16 +7,10 @@ from compiler.compile import compile
 
 print(argv)
 
-input_file = "input.lla" if len(argv) < 2 else argv[1]
+input_file = "compiler/input.lla" if len(argv) < 2 else argv[1]
 backend_name = "default"
 if len(argv) >= 3:
   backend_name = argv[2]
-backend = None
-if backend_name == "default":
-  backend = backend.default.DefaultBackend()
-
-if backend is None:
-  raise ValueError(f"Bad backend {backend_name}")
 
 with open(input_file, "r") as f:
   tokens = parse(f.read())
