@@ -14,6 +14,9 @@ class DefaultDataLocation(DataLoc):
         self._loc = loc
         self._type = typ
 
+    def type(self) -> Type:
+        return self._type
+
     def __str__(self):
         return f"@{self._loc}({self._type.name})"
 
@@ -29,6 +32,7 @@ class DefaultBackend(Backend):
         self._code = []
         self._stack_ptr = 0
         self._mem_ptr = 0
+        self._tempvars = set()
 
     def name() -> str:
         return "Default"
@@ -43,6 +47,18 @@ class DefaultBackend(Backend):
         with open(filename, "w") as f:
             f.write("\n".join(self._code))
 
+    def copy(self, source: DefaultDataLocation, target: DefaultDataLocation):
+        self._code.append(f"copy {source} to {target}")
+
+    def set(self, target: DefaultDataLocation, value):
+        self._code.append(f"set {target} to {value}")
+
+    def create_static_var(self, t: Type) -> DefaultDataLocation:
+        v = DefaultDataLocation(f"mem@{self._mem_ptr}", t)
+        self._mem_ptr += v.size()
+        self._code.append(f"create static var {v}")
+        return v
+
     def create_local_var(self, t: Type) -> DefaultDataLocation:
         v = DefaultDataLocation(f"stack@{self._stack_ptr}", t)
         self._stack_ptr += v.size()
@@ -52,6 +68,18 @@ class DefaultBackend(Backend):
     def dispose_local_var(self, v: DefaultDataLocation) -> None:
         self._stack_ptr -= v.size()
         self._code.apped(f"dispose local var {v}")
+
+    def create_temp_var(self, t: Type) -> DefaultDataLocation:
+        idx = max(self._tempvars) + 1 if self._tempvars else 0
+        self._tempvars.add(idx)
+        v = DefaultDataLocation(f"Reg {idx}", t)
+        self._code.append(f"create temp var {v}")
+        return v
+
+    def release_temp_var(self, tvar: DataLoc) -> None:
+        idx = int(tvar._loc.split(" ")[1])
+        self._tempvars.remove(idx)
+        self._code.append(f"release temp var {tvar}")
 
     def begin_func(
         self, return_type: Type, args: list[Type]

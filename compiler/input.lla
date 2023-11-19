@@ -3,11 +3,12 @@ static a: i8;
 fun main() {
 */
 
-/*
   a := 42;
+
 
   local b: i8;
   b := (a+1)*3;
+/*
 
   { local hello: i8; };
 
