@@ -28,9 +28,23 @@ class Emu23Backend(Backend):
     self.labelnames=[]
     self.addr=0
     self.isinfunc=False
+    self.staticsize=0
+    self.ntvar=False
 
   def create_static_var(self, t: Type) -> DataLoc:
-    pass
+    if isinstance(t, PrimitiveType):
+      t=self.to_complex_type(t)
+    if t.align==1:
+      pass
+    elif t.align==2:
+      self.staticsize+=self.staticsize%2
+    elif t.align==4:
+      self.staticsize+=3
+      self.staticsize&=-4
+    else:
+      raise ValueError('weird alignment')
+    self.staticsize+=t.size
+    return Emu23DataLoc(t,None,self.staticsize-t.size)
 
   def set_entry(self, entry: CodeLoc) -> None:
     self.entry = entry
@@ -65,7 +79,9 @@ class Emu23Backend(Backend):
   def create_local_var(self, t: Type) -> DataLoc:
     self.blocks[-1].append(t)
     self.stack_ptr+=self.__so(t)
-    #
+    for _ in range(self.__so(t)):
+      self.code.append(([0x2d],'phb'))
+    return Emu23DataLoc(t,self.stack_ptr)
 
   def begin_func(self, return_type: Type, args: list[Type]) -> typle[DataLoc, list[DataLoc]]:
     if self.isinfunc:
@@ -91,8 +107,23 @@ class Emu23Backend(Backend):
   def set(self, target: DataLoc, value: Any) -> None:
     pass
 
-  def create_temp_ver(self, t: Type) -> DataLoc:
-    pass
+  def create_temp_ver(self, t: PrimitiveType) -> DataLoc:
+    if self.lefttvar is None:
+      l=Emu23DataLoc(t)
+      self.lefttvar = l
+      return l
+    elif self.righttvar is None:
+      l=Emu23DataLoc(t,None,None,True)
+      self.righttvar=l
+      return l
+    else:
+      s=self.__so(t)
+      if self.ntvar:
+        #
+	self.righttvar.stack=self.stack_ptr
+	self.righttvar.r=False
+	self.righttvar=Emu23DataLoc(t,None,None,True)
+	#TODO
 
   def release_temp_var(self, tvar: DataLoc) -> None:
     pass
@@ -145,7 +176,7 @@ class Emu23Backend(Backend):
 
   def offset(base: DataLoc, offset: int, primitive: PrimitiveType) -> DataLoc:
     if base.stack is not None:
-      return Emu23DataLoc(primitive, base.stack+offset)
+      return Emu23DataLoc(primitive, base.stack-offset)
     elif base.absolute is not None:
       return Emu23DataLoc(primitive, None, base.absolute+offset)
     else:
