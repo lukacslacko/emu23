@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 class CodeLoc:
   pass
@@ -29,7 +30,7 @@ class UnaryOperation(Enum):
   ADDR = 'addrof'
   # NOTE: more operations
 
-class Type:
+class Type(Enum):
   BOOL = 'bool'
   I8 = 'i8'
   I16 = 'i16'
@@ -106,14 +107,14 @@ class Backend:
   def unary_operate(self, op: UnaryOperation, source: DataLoc, target: DataLoc) -> None:
     pass
 
-  def break(self, level: int) -> None:
+  def break_(self, level: int) -> None:
     pass
 
   def end_block(self) -> None:
     pass
 
-  def return(self) -> None:
+  def return_(self) -> None:
     pass
 
   def end_function(self) -> None:
-    self.return()
+    self.return_()
