@@ -72,9 +72,9 @@ class DefaultBackend(Backend):
         self._code.append(f"create local var {v}")
         return v
 
-    def dispose_local_var(self, v: DefaultDataLocation) -> None:
+    def _dispose_local_var(self, v: DefaultDataLocation) -> None:
         self._stack_ptr -= v.size()
-        self._code.apped(f"dispose local var {v}")
+        self._code.append(f"dispose local var {v}")
 
     def create_temp_var(self, t: Type) -> DefaultDataLocation:
         idx = max(self._tempvars) + 1 if self._tempvars else 0
@@ -95,6 +95,6 @@ class DefaultBackend(Backend):
         self._arg_vals = [self.create_local_var(t) for t in args]
         return (self._ret_val, self._arg_vals)
 
-    def end_func(self) -> None:
+    def end_function(self) -> None:
         for v in reversed(self._arg_vals):
             self._dispose_local_var(v)
