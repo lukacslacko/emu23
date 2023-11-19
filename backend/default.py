@@ -2,11 +2,12 @@ from backend.api2 import Backend, BinaryOperation, Type, CodeLoc, DataLoc
 
 
 class DefaultCodeLocation(CodeLoc):
-    def __init__(self, line: int):
-        self._line = line
+    def __init__(self, name: str):
+        self._line = -1
+        self._name = name
 
     def __str__(self):
-        return f"code@{self._line}"
+        return f"code'{self._name}'@{self._line}"
 
 
 class DefaultDataLocation(DataLoc):
@@ -53,6 +54,12 @@ class DefaultBackend(Backend):
     def set(self, target: DefaultDataLocation, value):
         self._code.append(f"set {target} to {value}")
 
+    def get_label(self, name: str) -> DefaultCodeLocation:
+        return DefaultCodeLocation(name)
+
+    def link_label_to_here(self, label: CodeLoc) -> None:
+        label._line = len(self._code)
+
     def binary_operate(
         self, op: BinaryOperation, left: DataLoc, right: DataLoc, result: DataLoc
     ) -> None:
@@ -98,3 +105,7 @@ class DefaultBackend(Backend):
     def end_function(self) -> None:
         for v in reversed(self._arg_vals):
             self._dispose_local_var(v)
+        self._code.append("end of function")
+
+    def call(self, func: CodeLoc, args: list[DataLoc], target: DataLoc):
+        self._code.append(f"Call {func} with args {args} and target {target}")

@@ -7,6 +7,7 @@ class Operator(Enum):
     LEAF = "leaf"
     BINARY = "binary"
     UNARY = "unary"
+    FUNCALL = "funcall"
 
 
 class Expr:
@@ -51,4 +52,16 @@ def parse(tokens: list[str]) -> Expr:
             return Expr(
                 Operator.BINARY, op, [parse(tokens[:idx]), parse(tokens[idx + 1 :])]
             )
+    if len(tokens) > 2 and tokens[1] == "(" and paren(tokens[1:]) == len(tokens) - 2:
+        arg_tokens = tokens[2:-1]
+        args = []
+        idx = 0
+        while True:
+            next_idx = find_first(",", arg_tokens[idx:])
+            if next_idx is None:
+                args.append(parse(arg_tokens[idx:]))
+                break
+            args.append(parse(arg_tokens[idx:next_idx]))
+            idx = next_idx + 1
+        return Expr(Operator.FUNCALL, tokens[0], args)
     raise ValueError(f"Can't parse expression {tokens}")

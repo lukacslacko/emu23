@@ -24,4 +24,5 @@ with open(input_file, "r") as f:
     print("\n".join(" ".join(r) + " ;" for r in l))
     compile(l, backend)
 
-print("\n".join(backend._code))
+for i, l in enumerate(backend._code):
+    print(f"{i:04}   {l}")

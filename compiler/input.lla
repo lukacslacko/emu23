@@ -1,61 +1,9 @@
-static a: i8;
-/*
-fun main() {
-*/
 
-
-fun sq(x: i8; result: i8) {
-  result := x * x;
+fun mul(x: i8, y: i8; result: i8) {
+  result := x * y;
 };
 
 
-{
-  a := 42;
-
-
-  local b: i8;
-  b := (a+1)*3;
-//  b := b + sq(1+2);
-
-  {
-    local b: i8;
-    b := a + 1;
-    a := b;
-  };
-
-  a := b + a;
+fun main(; result: i8) {
+  result := mul(1+2, 3+4);
 };
-
-
-/*
-
-  { local hello: i8; };
-
-  if (b > 10) {
-    local x: i8;
-    x := a + b;
-  };
-
-  while (a > 1) {
-    a := a - 1;
-    if (b < 40) {
-      b := b + 1;
-    }
-  };
-
-  local c: i8;
-  c := 4;
-  c := b + c + a +10;
-  b := 2 * c;
-  local d: i8;
-  d := a * b + c * 2;
-
-  local e: i8;
-  e := 1;
-  local i: i8;
-  for (i := 0;i < 20;i+=1) {
-    e *= 3;
-  };
-/*
-};
-*/

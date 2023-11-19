@@ -33,7 +33,7 @@ class FunInfo:
 
 stack = []
 static_vars = dict()
-funs = dict()
+funs: dict[str, FunInfo] = dict()
 
 
 def _find_local_var(name: str) -> DataLoc:
@@ -55,15 +55,17 @@ def _parse_type(tokens: list[str]) -> Type:
     return PrimitiveType(tokens[0])
 
 
+def _copy(source: DataLoc, target: DataLoc, backend: Backend):
+    if source.type() != target.type():
+        raise ValueError(f"Different types of target {target} and source {source}")
+    backend.copy(source=source, target=target)
+
+
 def compute(e: expression.Expr, target: DataLoc, backend: Backend):
     if e.operator == Operator.LEAF:
         v = _find_var(e.operator_name)
         if v is not None:
-            if v.type() != target.type():
-                raise ValueError(
-                    f"Different types of target {target} and source {v} in expression {e}"
-                )
-            backend.copy(source=v, target=target)
+            _copy(source=v, target=target, backend=backend)
             return
         backend.set(target=target, value=int(e.operator_name))
         return
@@ -79,6 +81,25 @@ def compute(e: expression.Expr, target: DataLoc, backend: Backend):
         )
         backend.release_temp_var(left_temp)
         backend.release_temp_var(right_temp)
+        return
+    if e.operator == Operator.FUNCALL:
+        name = e.operator_name
+        if name not in funs:
+            raise ValueError(f"Unknown function {name} in {e}")
+        f = funs[name]
+        if len(f.args) != len(e.operands):
+            raise ValueError(
+                f"Function {f} expects {len(f.args)} arguments, {len(e.operands)} provided in {e}"
+            )
+        for i in range(len(f.args)):
+            temp = backend.create_temp_var(f.args[i].type())
+            compute(e.operands[i], temp, backend)
+            _copy(source=temp, target=f.args[i], backend=backend)
+            backend.release_temp_var(temp)
+        backend.call(f.code, f.args, f.ret)
+        _copy(source=f.ret, target=target, backend=backend)
+        return
+    raise ValueError(f"Cannot compute {e}")
 
 
 def compile_decl(st: sta.Decl, backend: Backend):
