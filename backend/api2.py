@@ -1,13 +1,25 @@
 from enum import Enum
-from typing import Any
+from typing import Any, Union
 
 
-class Type(Enum):
+class PrimitiveType(Enum):
     BOOL = "bool"
     I8 = "i8"
     I16 = "i16"
     PTRDIFF = "ptrdiff"
     FUNPTR = "funptr"
+
+
+class ComplexType:
+    size: int
+    align: int
+
+    def __init__(self, size: int, align: int):
+        self.size = size
+        self.align = align
+
+
+Type = Union[PrimitiveType, ComplexType]
 
 
 class CodeLoc:
@@ -131,3 +143,9 @@ class Backend:
 
     def end_function(self) -> None:
         self.return_()
+
+    def to_complex_type(primitive: PrimitiveType) -> ComplexType:
+        pass
+
+    def offset(base: DataLoc, offset: int, primitive: PrimitiveType) -> DataLoc:
+        pass
