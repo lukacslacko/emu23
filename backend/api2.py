@@ -33,6 +33,8 @@ class Type:
   BOOL = 'bool'
   I8 = 'i8'
   I16 = 'i16'
+  PTRDIFF = 'ptrdiff'
+  FUNPTR = 'funptr'
 
 class Backend:
   def name() -> str:
@@ -45,9 +47,6 @@ class Backend:
     pass
 
   def write_to_file(self, filename: str) -> None:
-    pass
-
-  def cast(self, source: DataLoc, target: DataLoc) -> None:
     pass
 
   def create_static_var(self, t: Type) -> DataLoc:
