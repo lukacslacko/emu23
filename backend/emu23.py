@@ -1,39 +1,47 @@
-from backend.api import *
-from enum import Enum
+from backend.api2 import *
 
-_SIZE = {
-  Type.BOOL: 1,
-  Type.INT8: 1,
-  Type.INT16: 2,
-  Type.PTR: 3,
-}
+class Emu23CodeLoc(CodeLoc):
+  def __init__(self, name: str):
+    self.name=name
+    self.ll=[]
+    self.lh=[]
+    self.lb=[]
+    self.addr=None
 
-class Emu23CodeLocation(CodeLocation):
-  def __init__(self, addr: int):
-    self._addr = addr
-
-  def __str__(self):
-    return f"code@{self._addr:06x}"
-
-class Emu23DataLocationTypes(Enum):
-  STACK = "stack"
-  MEM = "mem"
-  BREAK_COUNTER = "brkc"
-
-class Emu23DataLocation(DataLocation):
-  def __init__(self, typ: Type, loctyp: Emu23DataLocationTypes, loc: int):
-    self._loc = loc
-    self._type = typ
-    self._loctyp = loctyp
-
-  def __str__(self):
-    return f"@{self._loctyp.value}{self._loc}({self._type.value})"
-
-  def __repr__(self):
-    return str(self)
-
-  def size(self) -> int:
-    return _SIZE[self._typ]
+class Emu23DataLoc(DataLoc):
+  pass
 
 class Emu23Backend(Backend):
-  pass
+  def name() -> str:
+    return 'Emu23'
+
+  def __init__(self) -> None:
+    self.code=[]
+    self.labels=[]
+    self.labelnames=[]
+    self.addr=0
+
+  def set_entry(self, entry: Emu23CodeLoc) -> None:
+    self.entry = entry
+
+  def link(self) -> None:
+    pass
+
+  def write_to_file(self, filename: str) -> None:
+    pass
+
+  def comment(self, comment: str) -> None:
+    self.code.append(([],';'+comment))
+
+  def get_label(self, name: str) -> Emu23CodeLoc:
+    i=0
+    while name+str(i) in self.labelnames:
+      i+=1
+    self.labelnames.append(name+str(i))
+    l=Emu23CodeLoc(name+str(i))
+    self.labels.append(l)
+    return l
+
+  def link_label_to_here(self, label: Emu23CodeLoc) -> None:
+    self.comment(label.name+':')
+    label.addr=self.addr
