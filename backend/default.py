@@ -1,4 +1,4 @@
-from backend.api2 import Backend, Type, CodeLoc, DataLoc
+from backend.api2 import Backend, BinaryOperation, Type, CodeLoc, DataLoc
 
 
 class DefaultCodeLocation(CodeLoc):
@@ -52,6 +52,13 @@ class DefaultBackend(Backend):
 
     def set(self, target: DefaultDataLocation, value):
         self._code.append(f"set {target} to {value}")
+
+    def binary_operate(
+        self, op: BinaryOperation, left: DataLoc, right: DataLoc, result: DataLoc
+    ) -> None:
+        self._code.append(
+            f"binary operate {op} on left {left} and right {right} into {result}"
+        )
 
     def create_static_var(self, t: Type) -> DefaultDataLocation:
         v = DefaultDataLocation(f"mem@{self._mem_ptr}", t)
