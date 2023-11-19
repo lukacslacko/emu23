@@ -1,4 +1,4 @@
-from backend.api2 import Backend, PrimitiveType, DataLoc, CodeLoc
+from backend.api2 import Backend, PrimitiveType, Type, DataLoc, CodeLoc
 from compiler.sta import statement
 from compiler import sta, expression
 from compiler.expression import Operator
@@ -14,13 +14,26 @@ class LocalVarDecl(StackElement):
         self.name = name
         self.v = v
 
+    def __str__(self):
+        return f"local var {self.name} is {self.v}"
+
+    def __repr__(self):
+        return str(self)
+
 
 class Block(StackElement):
     pass
 
 
+class FunInfo:
+    code: CodeLoc
+    ret: DataLoc
+    args: list[DataLoc]
+
+
 stack = []
 static_vars = dict()
+funs = dict()
 
 
 def _find_local_var(name: str) -> DataLoc:
@@ -34,6 +47,12 @@ def _find_var(name: str) -> DataLoc:
     if name in static_vars:
         return static_vars[name]
     return _find_local_var(name)
+
+
+def _parse_type(tokens: list[str]) -> Type:
+    if len(tokens) != 1:
+        raise ValueError(f"Need single token type: {tokens}")
+    return PrimitiveType(tokens[0])
 
 
 def compute(e: expression.Expr, target: DataLoc, backend: Backend):
@@ -64,9 +83,7 @@ def compute(e: expression.Expr, target: DataLoc, backend: Backend):
 
 def compile_decl(st: sta.Decl, backend: Backend):
     global static_vars, stack
-    if len(st.type) != 1:
-        raise ValueError(f"Require single token type: {st}")
-    ty = PrimitiveType(st.type[0])
+    ty = _parse_type(st.type)
     name = st.name
     if st.storage == sta.Storage.LOCAL:
         if name in static_vars:
@@ -106,6 +123,29 @@ def compile_block(st: sta.Block, backend: Backend):
             backend.comment(f"compiler forgetting local var {s.name}: {s.v}")
 
 
+def compile_fundef(st: sta.Fundef, backend: Backend):
+    global funs, stack
+    if len(stack) > 0:
+        raise ValueError(f"Fundef with non-empty stack {st}, {stack}")
+    if st.name in funs:
+        raise ValueError(f"Function already defined {st.name} in {st}")
+    info = FunInfo()
+    info.code = backend.get_label(f"funstart_{st.name}")
+    backend.link_label_to_here(info.code)
+    ret_type = _parse_type(st.result[1])
+    ret_name = st.result[0]
+    arg_types = [_parse_type(input[1]) for input in st.inputs]
+    info.ret, info.args = backend.begin_func(ret_type, arg_types)
+    funs[st.name] = info
+    stack.append(LocalVarDecl(ret_name, info.ret))
+    for input, dl in zip(st.inputs, info.args):
+        stack.append(LocalVarDecl(input[0], dl))
+    compile(st.body, backend)
+    backend.end_function()
+    while stack:
+        backend.comment(f"Compiler forgetting {stack.pop()}")
+
+
 def compile(lines: list[list[str]], backend: Backend):
     sts = list(map(statement, lines))
     print("\n".join(list(map(str, sts))))
@@ -117,5 +157,7 @@ def compile(lines: list[list[str]], backend: Backend):
             compile_assignment(st, backend)
         elif isinstance(st, sta.Block):
             compile_block(st, backend)
+        elif isinstance(st, sta.Fundef):
+            compile_fundef(st, backend)
         else:
             raise NotImplementedError(f"Cannot compile {st}")

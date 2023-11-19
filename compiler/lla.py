@@ -2,8 +2,9 @@
 from sys import argv
 
 from backend import default
-from compiler.parse import parse, find_lines
+from compiler.parse import parse
 from compiler.compile import compile
+from compiler.sta import find_lines
 
 print(argv)
 

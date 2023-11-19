@@ -27,14 +27,3 @@ def parse(s: str) -> list[str]:
       s = s[1:]
     return [n] + parse(s)
   raise ValueError(s)
-
-def find_lines(tokens: list[str]) -> list[list[str]]:
-  lines = []
-  while tokens:
-    s = stat(tokens)
-    if s < 1:
-      raise ValueError(s, tokens)
-    lines.append(tokens[:s])
-    tokens = tokens[s+1:]
-  return lines
-  
