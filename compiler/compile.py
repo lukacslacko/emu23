@@ -1,4 +1,4 @@
-from backend.api2 import Backend, Type, DataLoc, CodeLoc
+from backend.api2 import Backend, PrimitiveType, DataLoc, CodeLoc
 from compiler.sta import statement
 from compiler import sta, expression
 from compiler.expression import Operator
@@ -13,6 +13,10 @@ class LocalVarDecl(StackElement):
     def __init__(self, name: str, v: DataLoc):
         self.name = name
         self.v = v
+
+
+class Block(StackElement):
+    pass
 
 
 stack = []
@@ -62,7 +66,7 @@ def compile_decl(st: sta.Decl, backend: Backend):
     global static_vars, stack
     if len(st.type) != 1:
         raise ValueError(f"Require single token type: {st}")
-    ty = Type(st.type[0])
+    ty = PrimitiveType(st.type[0])
     name = st.name
     if st.storage == sta.Storage.LOCAL:
         if name in static_vars:
@@ -88,6 +92,20 @@ def compile_assignment(st: sta.Assignment, backend: Backend):
         raise ValueError(f"Computation error {e} in {st}")
 
 
+def compile_block(st: sta.Block, backend: Backend):
+    global stack
+    stack.append(Block())
+    backend.begin_block()
+    compile(st.lines, backend)
+    backend.end_block()
+    while True:
+        s = stack.pop()
+        if isinstance(s, Block):
+            break
+        if isinstance(s, LocalVarDecl):
+            backend.comment(f"compiler forgetting local var {s.name}: {s.v}")
+
+
 def compile(lines: list[list[str]], backend: Backend):
     sts = list(map(statement, lines))
     print("\n".join(list(map(str, sts))))
@@ -97,5 +115,7 @@ def compile(lines: list[list[str]], backend: Backend):
             compile_decl(st, backend)
         elif isinstance(st, sta.Assignment):
             compile_assignment(st, backend)
+        elif isinstance(st, sta.Block):
+            compile_block(st, backend)
         else:
             raise NotImplementedError(f"Cannot compile {st}")
