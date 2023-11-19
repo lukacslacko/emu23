@@ -3,6 +3,7 @@ static a: i8;
 fun main() {
 */
 
+/*
   a := 42;
 
   local b: i8;
