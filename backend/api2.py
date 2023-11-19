@@ -6,16 +6,33 @@ class CodeLoc:
 class DataLoc:
   pass
 
-class Operation(Enum):
+class BinaryOperation(Enum):
   ADD = 'add'
   SUB = 'sub'
+  XOR = 'xor'
+  AND = 'and'
+  OR  = 'or'
+  GT  = 'gt'
+  LT  = 'lt'
+  GTE = 'gte'
+  LTE = 'lte'
+  EQ  = 'eq'
+  NE  = 'ne'
+  # mul
+  # div
+  # mod
   # TODO: more operations
 
-class Type(Enum):
+class UnaryOperation(Enum):
+  NOT  = 'not'
+  NEG  = 'neg'
+  ADDR = 'addrof'
+  # NOTE: more operations
+
+class Type:
   BOOL = 'bool'
   I8 = 'i8'
   I16 = 'i16'
-  PTR = 'ptr'
 
 class Backend:
   def name() -> str:
@@ -36,7 +53,7 @@ class Backend:
   def create_static_var(self, t: Type) -> DataLoc:
     pass
 
-  def get_label(self) -> CodeLoc:
+  def get_label(self, name: str) -> CodeLoc:
     pass
 
   def link_label_to_here(self, label: CodeLoc) -> None:
@@ -84,14 +101,20 @@ class Backend:
   def call_ptr(self, func: DataLoc, args: list[DataLoc], target: DataLoc) -> None:
     pass
 
-  def operate(self, op: Operation, left: DataLoc, right: DataLoc, result: DataLoc) -> None:
+  def binary_operate(self, op: BinaryOperation, left: DataLoc, right: DataLoc, result: DataLoc) -> None:
+    pass
+
+  def unary_operate(self, op: UnaryOperation, source: DataLoc, target: DataLoc) -> None:
     pass
 
   def break(self, level: int) -> None:
     pass
 
-  def end_block(self):
+  def end_block(self) -> None:
+    pass
+
+  def return(self) -> None:
     pass
 
   def end_function(self) -> None:
-    pass
+    self.return()
