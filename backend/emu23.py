@@ -29,6 +29,9 @@ class Emu23Backend(Backend):
     self.addr=0
     self.isinfunc=False
 
+  def create_static_var(self, t: Type) -> DataLoc:
+    pass
+
   def set_entry(self, entry: CodeLoc) -> None:
     self.entry = entry
 
@@ -76,7 +79,7 @@ class Emu23Backend(Backend):
     for arg in args:
       a.append(self.create_local_var(arg)
     self.stack_ptr+=5
-    # TODO: push frame
+    self.code.append([0x1e],'phf')
     return r,a
 
   def begin_block(self) -> None:
@@ -120,7 +123,7 @@ class Emu23Backend(Backend):
     self.break_(1)
 
   def return_(self) -> None:
-    self.code+=[(),()]
+    self.code+=[([0x1f],'plf'),([0x43],'retl')]
 
   def end_function(self) -> None:
     self.isinfunc = False
