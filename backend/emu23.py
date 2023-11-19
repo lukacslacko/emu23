@@ -9,7 +9,8 @@ class Emu23CodeLoc(CodeLoc):
     self.addr=None
 
 class Emu23DataLoc(DataLoc):
-  pass
+  def size(self):
+    return 4
 
 class Emu23Backend(Backend):
   def name() -> str:
@@ -20,6 +21,11 @@ class Emu23Backend(Backend):
     self.labels=[]
     self.labelnames=[]
     self.addr=0
+    self.isinfunc=False
+    self.blocks=[]
+    self.lefttvar=None
+    self.righttvar=None
+    self.stack_ptr=0
 
   def set_entry(self, entry: Emu23CodeLoc) -> None:
     self.entry = entry
@@ -45,3 +51,56 @@ class Emu23Backend(Backend):
   def link_label_to_here(self, label: Emu23CodeLoc) -> None:
     self.comment(label.name+':')
     label.addr=self.addr
+
+  #begin_func
+
+  def begin_block(self) -> None:
+    self.blocks.append([])
+
+  def copy(self, source: DataLoc, target: DataLoc) -> None:
+    pass
+
+  def set(self, target: DataLoc, value: Any) -> None:
+    pass
+
+  def create_temp_ver(self, t: Type) -> DataLoc:
+    pass
+
+  def release_temp_var(self, tvar: DataLoc) -> None:
+    pass
+
+  def jump(self, target: CodeLoc) -> None:
+    pass
+    # tbc targetB
+    # tcpcb
+    # tbc targetH
+    # tcpch
+    # tbc targetL
+    # jmpl
+
+  def jump_if_zero(self, cond: DataLoc, target: CodeLoc) -> None:
+    pass
+
+  def jump_if_not_zero(self, cond: DataLoc, target: CodeLoc) -> None:
+    pass
+
+  # call
+
+  # call_ptr
+
+  def break_(self, level: int) -> None:
+    pass
+
+  def end_block(self) -> None:
+    self.break_(1)
+
+  def return_(self) -> None:
+    pass
+
+  def end_function(self) -> None:
+    self.isinfunc = False
+    self.return_()
+
+  # binary_operate
+
+  # unary_operate
