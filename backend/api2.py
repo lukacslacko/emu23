@@ -6,9 +6,7 @@ class PrimitiveType(Enum):
     BOOL = "bool"
     I8 = "i8"
     I16 = "i16"
-    PTRDIFF = "ptrdiff"
-    FUNPTR = "funptr"
-
+    PTR = "ptr"
 
 class ComplexType:
     size: int
