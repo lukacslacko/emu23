@@ -76,9 +76,10 @@ public:
     printf("CZI=%d%d%d PC=%06x PCB=%02x PCH=%02x RA=%06x SB=%02x ISB=%02x SP=%04x FP=%04x r1=%02x r2=%02x r3=%02x r4=%02x r5=%02x r6=%02x r7=%02x A=r%d B=r%d C=%02x int=%02x halted=%d\r\n",flagC,flagZ,flagI,PC,PCB,PCH,RA,SB,ISB,SP,FP,r1,r2,r3,r4,r5,r6,r7,rA,rB,rC,intc,halted);
   }
   uint8_t rom[0x8000];
+  bool dbg;
 private:
   char Char;
-  bool halted,dbg;
+  bool halted;
   uint32_t clockrate;
   uint8_t r0,r1,r2,r3,r4,r5,r6,r7,rC;
   uint8_t intc;
@@ -535,7 +536,7 @@ private:
     if (addr>=0x020000&&addr<=0x05ffff) {
       return ram2[addr-0x020000];
     }
-    if (addr==0x8fffff) {
+    if (addr==0x7fffff) {
       char c=Char;
       Char=0;
       return c;
@@ -570,7 +571,7 @@ private:
       ram2[addr-0x020000]=data;
       return;
     }
-    if (addr==0x8fffff) {
+    if (addr==0x7fffff) {
       if (data) ::write(STDOUT_FILENO, (void*)&data, 1);
       return;
     }
@@ -597,7 +598,7 @@ private:
     }
   }
   uint8_t read(uint32_t addr) {
-    if (PC<0x800000) {
+    if (addr<0x800000) {
       if (flagI) {
         return physread(addr,true);
       } else {
@@ -617,7 +618,7 @@ private:
     }
   }
   void write(uint32_t addr, uint8_t data) {
-    if (PC<0x800000) {
+    if (addr<0x800000) {
       if (flagI) {
         physwrite(addr,data,true);
       } else {
@@ -833,7 +834,7 @@ int main(int argc, char** argv) {
   cpu.rom[1]=0x08;
   cpu.rom[2]=0x23;
   cpu.rom[3]=0x28;
-  cpu.rom[4]=0x8f;
+  cpu.rom[4]=0x7f;
   cpu.rom[5]=0x38;
   cpu.rom[6]=0x28;
   cpu.rom[7]=0xff;
@@ -850,6 +851,7 @@ int main(int argc, char** argv) {
   struct timespec nt, request = {0,104166L};
   char c;
   struct pollfd pfd;
+  bool isdebug=false;
   pfd.fd=STDIN_FILENO;
   pfd.events=POLLIN;
   clock_gettime(CLOCK_MONOTONIC,&lt);
@@ -857,10 +859,21 @@ int main(int argc, char** argv) {
     if (poll(&pfd,1,10)==-1) die("poll");
     if(pfd.revents&POLLIN) {
       if(read(STDIN_FILENO, &c, 1)==-1) die("read");
-      if (c=='q') break;
-      if (c=='s') cpu.doInst();
-      cpu.addchar(c);
-      nanosleep(&request,&nt);
+      if (c==4) isdebug=true; else
+      if (isdebug) {
+        if (c=='q') break;
+        if (c=='s') cpu.doInst();
+	if (c==4) {
+	  cpu.addchar(c);
+          nanosleep(&request,&nt);
+	}
+	if (c=='x') isdebug=false;
+	if (c=='b') cpu.dbg=true;
+	if (c=='c') cpu.dbg=false;
+      } else {
+        cpu.addchar(c);
+        nanosleep(&request,&nt);
+      }
     }
     clock_gettime(CLOCK_MONOTONIC,&nt);
     cpu.run(d(&nt,&lt));
