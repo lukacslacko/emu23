@@ -557,8 +557,7 @@ private:
       return;
     }
     if (addr==0x8fffff) {
-      printf("%c",data);
-      tcflush(STDOUT_FILENO, TCIOFLUSH);
+      ::write(STDOUT_FILENO, (void*)&data, 1);
       return;
     }
     fault(4,true);
@@ -810,7 +809,7 @@ void enableRawMode() {
 
 int main(int argc, char** argv) {
   enableRawMode();
-  CPU cpu = CPU(100);
+  CPU cpu = CPU(1000);
   cpu.rom[0]=0x01;
   cpu.rom[1]=0x08;
   cpu.rom[2]=0x23;
@@ -846,4 +845,4 @@ int main(int argc, char** argv) {
   }
   return 0;
 }
-// g++ -Wall -Wfatal-errors -std=c++17 -O2 -o main main.cpp
+// g++ -Wall -Wfatal-errors -O2 -o main main.cpp
