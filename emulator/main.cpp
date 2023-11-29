@@ -17,17 +17,16 @@ public:
     cycle=0;
     halted=false;
     dbg=d;
-    clockrate=1/(double)hertz;
+    clockrate=1000000000L/hertz;
     reset();
     ltime=0;
   }
   ~CPU() {
     ;
   }
-  void run(double t) {
+  void run(uint32_t t) {
     if (dbg) return;
     ltime+=t;
-    std::string s;
     while (ltime>clockrate) {
       doInst();
       if (dbg) {
@@ -80,7 +79,7 @@ public:
 private:
   char Char;
   bool halted,dbg;
-  double clockrate;
+  uint32_t clockrate;
   uint8_t r0,r1,r2,r3,r4,r5,r6,r7,rC;
   uint8_t intc;
   bool flagC,flagZ,flagI;
@@ -92,7 +91,7 @@ private:
   uint8_t A,B;
   uint8_t cycle;
   bool hadimm;
-  double ltime;
+  uint32_t ltime;
   uint8_t ram0[0x4000];
   uint8_t atr[0x4000];
   uint8_t istack[0x10000];
@@ -821,10 +820,15 @@ void enableRawMode() {
   //raw.c_cc[VTIME] = 1;
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)==-1) die("tcsetattr");
 }
-
+uint32_t d(struct timespec *nt, struct timespec *lt) {
+  double secdiff = difftime(nt->tv_sec,lt->tv_sec);
+  uint32_t nanodiff = nt->tv_nsec-lt->tv_nsec;
+  nanodiff+=1000000000L*(uint32_t)secdiff;
+  return nanodiff;
+}
 int main(int argc, char** argv) {
   enableRawMode();
-  CPU cpu = CPU(1000000);
+  CPU cpu = CPU(1000000L);
   cpu.rom[0]=0x01;
   cpu.rom[1]=0x08;
   cpu.rom[2]=0x23;
@@ -842,12 +846,13 @@ int main(int argc, char** argv) {
   cpu.rom[14]=0x28;
   cpu.rom[15]=0x0c;
   cpu.rom[16]=0x3e;
-  time_t lt = time(nullptr);
-  time_t nt;
+  struct timespec lt;
+  struct timespec nt, request = {0,104166L};
   char c;
   struct pollfd pfd;
   pfd.fd=STDIN_FILENO;
   pfd.events=POLLIN;
+  clock_gettime(CLOCK_MONOTONIC,&lt);
   for(;;) {
     if (poll(&pfd,1,10)==-1) die("poll");
     if(pfd.revents&POLLIN) {
@@ -855,9 +860,10 @@ int main(int argc, char** argv) {
       if (c=='q') break;
       if (c=='s') cpu.doInst();
       cpu.addchar(c);
+      nanosleep(&request,&nt);
     }
-    nt=time(nullptr);
-    cpu.run(difftime(nt,lt));
+    clock_gettime(CLOCK_MONOTONIC,&nt);
+    cpu.run(d(&nt,&lt));
     lt=nt;
   }
   return 0;
