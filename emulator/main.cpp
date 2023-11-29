@@ -501,6 +501,11 @@ private:
       case 0x70://tpcbc
         rC=PCB;
         return 2;
+      case 0x71://testi
+        getImm();
+      case 0x72://test
+        flagZ=(A&B)==0;
+	return 2;
     }
     fault(1,true);
     return 1;
