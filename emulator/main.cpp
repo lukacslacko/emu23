@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <poll.h>
 #include <stdio.h>
 #include <termios.h>
 #include <errno.h>
@@ -33,6 +34,9 @@ public:
         break;
       }
     }
+  }
+  void addchar(char c) {
+    Char=c;
   }
   bool interrupt(char i) {
     if (i<0) {
@@ -74,6 +78,7 @@ public:
   }
   uint8_t rom[0x8000];
 private:
+  char Char;
   bool halted,dbg;
   double clockrate;
   uint8_t r0,r1,r2,r3,r4,r5,r6,r7,rC;
@@ -531,6 +536,11 @@ private:
     if (addr>=0x020000&&addr<=0x05ffff) {
       return ram2[addr-0x020000];
     }
+    if (addr==0x8fffff) {
+      char c=Char;
+      Char=0;
+      return c;
+    }
     fault(4,true);
     return 0;
   }
@@ -562,7 +572,7 @@ private:
       return;
     }
     if (addr==0x8fffff) {
-      ::write(STDOUT_FILENO, (void*)&data, 1);
+      if (data) ::write(STDOUT_FILENO, (void*)&data, 1);
       return;
     }
     fault(4,true);
@@ -807,14 +817,14 @@ void enableRawMode() {
   raw.c_oflag &= ~(OPOST);
   raw.c_cflag |= (CS8);
   raw.c_lflag &= ~(ECHO|ICANON|ISIG|IEXTEN);
-  raw.c_cc[VMIN] = 0;
-  raw.c_cc[VTIME] = 1;
+  //raw.c_cc[VMIN] = 0;
+  //raw.c_cc[VTIME] = 1;
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)==-1) die("tcsetattr");
 }
 
 int main(int argc, char** argv) {
   enableRawMode();
-  CPU cpu = CPU(1000);
+  CPU cpu = CPU(1000000);
   cpu.rom[0]=0x01;
   cpu.rom[1]=0x08;
   cpu.rom[2]=0x23;
@@ -827,22 +837,24 @@ int main(int argc, char** argv) {
   cpu.rom[9]=0x3c;
   cpu.rom[10]=0x27;
   cpu.rom[11]=0x6d;
-  cpu.rom[12]=0x10;
-  cpu.rom[13]=0x01;
-  cpu.rom[14]=0x24;
-  cpu.rom[15]=0x51;
-  cpu.rom[16]=0x28;
-  cpu.rom[17]=0x0c;
-  cpu.rom[18]=0x3e;
+  cpu.rom[12]=0x55;
+  cpu.rom[13]=0x51;
+  cpu.rom[14]=0x28;
+  cpu.rom[15]=0x0c;
+  cpu.rom[16]=0x3e;
   time_t lt = time(nullptr);
   time_t nt;
   char c;
+  struct pollfd pfd;
+  pfd.fd=STDIN_FILENO;
+  pfd.events=POLLIN;
   for(;;) {
-    int rr=read(STDIN_FILENO, &c, 1);
-    if (rr==-1) die("read");
-    if (rr!=0) {
+    if (poll(&pfd,1,10)==-1) die("poll");
+    if(pfd.revents&POLLIN) {
+      if(read(STDIN_FILENO, &c, 1)==-1) die("read");
       if (c=='q') break;
       if (c=='s') cpu.doInst();
+      cpu.addchar(c);
     }
     nt=time(nullptr);
     cpu.run(difftime(nt,lt));
