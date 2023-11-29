@@ -1,12 +1,17 @@
 from backend.api2 import *
 
-class Emu23CodeLoc(CodeLoc):
-  def __init__(self, name: str):
+class Label:
+  def __init__(self, name: str, off: int=0):
     self.name=name
     self.ll=[]
     self.lh=[]
     self.lb=[]
     self.addr=None
+    self.off=off
+
+class Emu23CodeLoc(CodeLoc):
+  def __init__(self, name: str):
+    self.label=Label(name)
 
 class Emu23DataLoc(DataLoc):
   def type(self) -> Type:
@@ -15,7 +20,7 @@ class Emu23DataLoc(DataLoc):
   def __init__(self, typ: Type, stack: int=None, absolute: int=None, r: bool=False) -> None:
     self.typ = typ
     self.stack = stack
-    self.absolute = absolute
+    self.absolute = Label('',absolute)
     self.r = r
 
 class Emu23Backend(Backend):
@@ -52,6 +57,9 @@ class Emu23Backend(Backend):
   def link(self) -> None:
     pass
 
+  def asmfunc(self, asm: str) -> None:
+    pass
+
   def write_to_file(self, filename: str) -> None:
     pass
 
@@ -64,12 +72,12 @@ class Emu23Backend(Backend):
       i+=1
     self.labelnames.append(name+str(i))
     l=Emu23CodeLoc(name+str(i))
-    self.labels.append(l)
+    self.labels.append(l.label)
     return l
 
   def link_label_to_here(self, label: CodeLoc) -> None:
     self.comment(label.name+':')
-    label.addr=self.addr
+    label.label.addr=self.addr
 
   def __so(self, t: Type) -> int:
     if isinstance(t, PrimitiveType):
@@ -178,6 +186,6 @@ class Emu23Backend(Backend):
     if base.stack is not None:
       return Emu23DataLoc(primitive, base.stack-offset)
     elif base.absolute is not None:
-      return Emu23DataLoc(primitive, None, base.absolute+offset)
+      return Emu23DataLoc(primitive, None, base.absolute.off+offset)
     else:
       raise

@@ -1,3 +1,9 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <termios.h>
+#include <errno.h>
+#include <unistd.h>
+
 #include <iostream>
 #include <fstream>
 #include <cstdint>
@@ -18,17 +24,14 @@ public:
     ;
   }
   void run(double t) {
+    if (dbg) return;
     ltime+=t;
     std::string s;
     while (ltime>clockrate) {
       doInst();
       if (dbg) {
-        debug();
-        std::cout << std::flush;
-        std::cin >> s;
+        break;
       }
-      ltime-=cycle*clockrate;
-      cycle=0;
     }
   }
   bool interrupt(char i) {
@@ -60,9 +63,14 @@ public:
       cycle++;
     }
     hadimm=false;
+    ltime-=cycle*clockrate;
+    cycle=0;
+    if (dbg) {
+      debug();
+    }
   }
   void debug() {
-    printf("CZI=%d%d%d PC=%06x PCB=%02x PCH=%02x RA=%06x SB=%02x ISB=%02x SP=%04x FP=%04x r1=%02x r2=%02x r3=%02x r4=%02x r5=%02x r6=%02x r7=%02x A=r%d B=r%d C=%02x int=%02x halted=%d",flagC,flagZ,flagI,PC,PCB,PCH,RA,SB,ISB,SP,FP,r1,r2,r3,r4,r5,r6,r7,rA,rB,rC,intc,halted);
+    printf("CZI=%d%d%d PC=%06x PCB=%02x PCH=%02x RA=%06x SB=%02x ISB=%02x SP=%04x FP=%04x r1=%02x r2=%02x r3=%02x r4=%02x r5=%02x r6=%02x r7=%02x A=r%d B=r%d C=%02x int=%02x halted=%d\r\n",flagC,flagZ,flagI,PC,PCB,PCH,RA,SB,ISB,SP,FP,r1,r2,r3,r4,r5,r6,r7,rA,rB,rC,intc,halted);
   }
   uint8_t rom[0x8000];
 private:
@@ -548,6 +556,11 @@ private:
       ram2[addr-0x020000]=data;
       return;
     }
+    if (addr==0x8fffff) {
+      printf("%c",data);
+      tcflush(STDOUT_FILENO, TCIOFLUSH);
+      return;
+    }
     fault(4,true);
   }
   uint8_t pread() {
@@ -774,11 +787,59 @@ private:
   }
 };
 
+struct termios orig_termios;
+void die(const char *s) {
+  perror(s);
+  exit(1);
+}
+void disableRawMode() {
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios)==-1) die("tcsetattr");
+}
+void enableRawMode() {
+  if (tcgetattr(STDIN_FILENO, &orig_termios)==-1) die("tcgetattr");
+  atexit(disableRawMode);
+  struct termios raw = orig_termios;
+  raw.c_iflag &= ~(IXON|ICRNL|BRKINT|ISTRIP);
+  raw.c_oflag &= ~(OPOST);
+  raw.c_cflag |= (CS8);
+  raw.c_lflag &= ~(ECHO|ICANON|ISIG|IEXTEN);
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)==-1) die("tcsetattr");
+  raw.c_cc[VMIN] = 0;
+  raw.c_cc[VTIME] = 1;
+}
+
 int main(int argc, char** argv) {
-  CPU cpu = CPU(100,true);
+  enableRawMode();
+  CPU cpu = CPU(100);
+  cpu.rom[0]=0x01;
+  cpu.rom[1]=0x08;
+  cpu.rom[2]=0x23;
+  cpu.rom[3]=0x28;
+  cpu.rom[4]=0x8f;
+  cpu.rom[5]=0x38;
+  cpu.rom[6]=0x28;
+  cpu.rom[7]=0xff;
+  cpu.rom[8]=0x3a;
+  cpu.rom[9]=0x3c;
+  cpu.rom[10]=0x27;
+  cpu.rom[11]=0x6d;
+  cpu.rom[12]=0x10;
+  cpu.rom[13]=0x01;
+  cpu.rom[14]=0x24;
+  cpu.rom[15]=0x51;
+  cpu.rom[16]=0x28;
+  cpu.rom[17]=0x0c;
+  cpu.rom[18]=0x3e;
   time_t lt = time(nullptr);
   time_t nt;
-    for(;;) {
+  char c;
+  for(;;) {
+    int rr=read(STDIN_FILENO, &c, 1);
+    if (rr==-1) die("read");
+    if (rr!=0) {
+      if (c=='q') break;
+      if (c=='s') cpu.doInst();
+    }
     nt=time(nullptr);
     cpu.run(difftime(nt,lt));
     lt=nt;

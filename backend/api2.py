@@ -61,6 +61,9 @@ class Backend:
     def set_entry(self, entry: CodeLoc) -> None:
         pass
 
+    def asmfunc(self, asm: str) -> None:
+        pass
+
     def link(self) -> None:
         pass
 
