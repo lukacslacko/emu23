@@ -11,6 +11,11 @@
 #include <string>
 #include <ctime>
 
+void die(const char *s) {
+  perror(s);
+  exit(1);
+}
+
 class CPU {
 public:
   CPU(uint32_t hertz, bool d=false) {
@@ -58,10 +63,10 @@ public:
     r0=0;
     uint8_t inst = pread();
     PC++;
-    PC&=0xffffff;
+    PC&=0xffffffL;
     getAB();
     cycle+=Inst(inst);
-    PC&=0xffffff;
+    PC&=0xffffffL;
     if (hadimm) {
       cycle++;
     }
@@ -95,9 +100,9 @@ private:
   uint32_t ltime;
   uint8_t ram0[0x4000];
   uint8_t atr[0x4000];
-  uint8_t istack[0x10000];
-  uint8_t ram1[0x10000];
-  uint8_t ram2[0x40000];
+  uint8_t istack[0x10000L];
+  uint8_t ram1[0x10000L];
+  uint8_t ram2[0x40000L];
 
   uint8_t Inst(uint8_t inst) {
     switch(inst){
@@ -284,19 +289,19 @@ private:
         rC=RA>>16;
         return 2;
       case 0x3a://tcrah
-        RA=RA&0xff00ff|(uint32_t)rC<<8;
+        RA=RA&0xff00ffL|(uint32_t)rC<<8;
         return 2;
       case 0x3b://trahc
         rC=RA>>8&0xff;
         return 2;
       case 0x3c://tcral
-        RA=RA&0xffff00|(uint32_t)rC;
+        RA=RA&0xffff00L|(uint32_t)rC;
         return 2;
       case 0x3d://tralc
         rC=RA&0xff;
         return 2;
       case 0x3e://jmps
-        PC=PC&0xff0000|(uint32_t)PCH<<8|(uint32_t)rC;
+        PC=PC&0xff0000L|(uint32_t)PCH<<8|(uint32_t)rC;
         return 2;
       case 0x3f://jmpl
         PC=(uint32_t)PCB<<16|(uint32_t)PCH<<8|(uint32_t)rC;
@@ -304,7 +309,7 @@ private:
       case 0x40://calls
         push(PC&0xff);
         push(PC>>8&0xff);
-        PC=PC&0xff0000|(uint32_t)PCH<<8|(uint32_t)rC;
+        PC=PC&0xff0000L|(uint32_t)PCH<<8|(uint32_t)rC;
         return 4;
       case 0x41://calll
         push(PC&0xff);
@@ -345,53 +350,53 @@ private:
       case 0x47://sicc
         if (!flagC) {
           PC+=2;
-          PC&=0xffffff;
+          PC&=0xffffffL;
           return 3;
         }
         return 2;
       case 0x48://scc
         if (!flagC) {
           PC++;
-          PC&=0xffffff;
+          PC&=0xffffffL;
         }
         return 2;
       case 0x49://scs
         if (flagC) {
           PC++;
-          PC&=0xffffff;
+          PC&=0xffffffL;
         }
         return 2;
       case 0x4a://sics
         if (flagC) {
           PC+=2;
-          PC&=0xffffff;
+          PC&=0xffffffL;
           return 3;
         }
         return 2;
       case 0x4b://sieq
         if (flagZ) {
           PC+=2;
-          PC&=0xffffff;
+          PC&=0xffffffL;
           return 3;
         }
         return 2;
       case 0x4c://seq
         if (flagZ) {
           PC++;
-          PC&=0xffffff;
+          PC&=0xffffffL;
         }
         return 2;
       case 0x4d://sine
         if (!flagZ) {
           PC+=2;
-          PC&=0xffffff;
+          PC&=0xffffffL;
           return 3;
         }
         return 2;
       case 0x4e://sne
         if (!flagZ) {
           PC++;
-          PC&=0xffffff;
+          PC&=0xffffffL;
         }
         return 2;
       case 0x4f://tic
@@ -517,7 +522,7 @@ private:
   }
   uint8_t physread(uint32_t addr, bool islow=false) {
     if (islow) {
-      if ((addr&0xff0000)==0) {
+      if ((addr&0xff0000L)==0) {
         if (addr<0x8000) {
           return rom[addr];
         }
@@ -530,13 +535,13 @@ private:
     if (addr>=0x000000&&addr<=0x00ffff) {
       return ram1[addr];
     }
-    if (addr>=0x010000&&addr<=0x01ffff) {
-      return istack[addr-0x010000];
+    if (addr>=0x010000L&&addr<=0x01ffffL) {
+      return istack[addr-0x010000L];
     }
-    if (addr>=0x020000&&addr<=0x05ffff) {
-      return ram2[addr-0x020000];
+    if (addr>=0x020000L&&addr<=0x05ffffL) {
+      return ram2[addr-0x020000L];
     }
-    if (addr==0x7fffff) {
+    if (addr==0x7fffffL) {
       char c=Char;
       Char=0;
       return c;
@@ -546,7 +551,7 @@ private:
   }
   void physwrite(uint32_t addr, uint8_t data, bool islow=false) {
     if (islow) {
-      if ((addr&0xff0000)==0) {
+      if ((addr&0xff0000L)==0) {
         if (addr<0x8000) {
           fault(4,true);
           return;
@@ -563,22 +568,22 @@ private:
       ram1[addr]=data;
       return;
     }
-    if (addr>=0x010000&&addr<=0x01ffff) {
-      istack[addr-0x010000]=data;
+    if (addr>=0x010000L&&addr<=0x01ffffL) {
+      istack[addr-0x010000L]=data;
       return;
     }
-    if (addr>=0x020000&&addr<=0x05ffff) {
-      ram2[addr-0x020000]=data;
+    if (addr>=0x020000L&&addr<=0x05ffffL) {
+      ram2[addr-0x020000L]=data;
       return;
     }
-    if (addr==0x7fffff) {
-      if (data) ::write(STDOUT_FILENO, (void*)&data, 1);
+    if (addr==0x7fffffL) {
+      if (data) if(::write(STDOUT_FILENO, (void*)&data, 1)!=1) die("write");
       return;
     }
     fault(4,true);
   }
   uint8_t pread() {
-    if (PC<0x800000) {
+    if (PC<0x800000L) {
       if (flagI) {
         return physread(PC,true);
       } else {
@@ -594,11 +599,11 @@ private:
           return 0;
         }
       }
-      return physread(a<<10&0x7ffc00|PC&0x3ff);
+      return physread(a<<10&0x7ffc00L|PC&0x3ff);
     }
   }
   uint8_t read(uint32_t addr) {
-    if (addr<0x800000) {
+    if (addr<0x800000L) {
       if (flagI) {
         return physread(addr,true);
       } else {
@@ -614,11 +619,11 @@ private:
           return 0;
         }
       }
-      return physread(a<<10&0x7ffc00|addr&0x3ff);
+      return physread(a<<10&0x7ffc00L|addr&0x3ff);
     }
   }
   void write(uint32_t addr, uint8_t data) {
-    if (addr<0x800000) {
+    if (addr<0x800000L) {
       if (flagI) {
         physwrite(addr,data,true);
       } else {
@@ -632,7 +637,7 @@ private:
           fault(5,true);
         }
       }
-      physwrite(a<<10&0x7ffc00|addr&0x3ff,data);
+      physwrite(a<<10&0x7ffc00L|addr&0x3ff,data);
     }
   }
   void push(uint8_t data) {
@@ -772,7 +777,7 @@ private:
     hadimm=true;
     r0=pread();
     PC++;
-    PC&=0xffffff;
+    PC&=0xffffffL;
     getAB();
   }
   void fault(uint8_t f, bool halt=false, bool iint=false) {
@@ -789,7 +794,7 @@ private:
       if (hadimm) {
         PC--;
       }
-      PC&=0xffffff;
+      PC&=0xffffffL;
     }
     intc=f;
     flagI=true;
@@ -802,10 +807,7 @@ private:
 };
 
 struct termios orig_termios;
-void die(const char *s) {
-  perror(s);
-  exit(1);
-}
+
 void disableRawMode() {
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios)==-1) die("tcsetattr");
 }
@@ -817,8 +819,6 @@ void enableRawMode() {
   raw.c_oflag &= ~(OPOST);
   raw.c_cflag |= (CS8);
   raw.c_lflag &= ~(ECHO|ICANON|ISIG|IEXTEN);
-  //raw.c_cc[VMIN] = 0;
-  //raw.c_cc[VTIME] = 1;
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw)==-1) die("tcsetattr");
 }
 uint32_t d(struct timespec *nt, struct timespec *lt) {
@@ -830,25 +830,37 @@ uint32_t d(struct timespec *nt, struct timespec *lt) {
 int main(int argc, char** argv) {
   enableRawMode();
   CPU cpu = CPU(1000000L);
-  cpu.rom[0]=0x01;
-  cpu.rom[1]=0x08;
-  cpu.rom[2]=0x23;
-  cpu.rom[3]=0x28;
-  cpu.rom[4]=0x7f;
-  cpu.rom[5]=0x38;
-  cpu.rom[6]=0x28;
-  cpu.rom[7]=0xff;
-  cpu.rom[8]=0x3a;
-  cpu.rom[9]=0x3c;
-  cpu.rom[10]=0x27;
-  cpu.rom[11]=0x6d;
-  cpu.rom[12]=0x55;
-  cpu.rom[13]=0x51;
-  cpu.rom[14]=0x28;
-  cpu.rom[15]=0x0c;
-  cpu.rom[16]=0x3e;
+  //ra1
+  //rb0
+  //tbc
+  //tcpch
+  //tbc 7f
+  //tcrab
+  //tbc ff
+  //tcrah
+  //tcral
+  //tbc 0d
+  //tma
+  //tam
+  //jmps
+  cpu.rom[0x0000]=0x01;
+  cpu.rom[0x0001]=0x08;
+  cpu.rom[0x0002]=0x29;
+  cpu.rom[0x0003]=0x6d;
+  cpu.rom[0x0004]=0x28;
+  cpu.rom[0x0005]=0x7f;
+  cpu.rom[0x0006]=0x38;
+  cpu.rom[0x0007]=0x28;
+  cpu.rom[0x0008]=0xff;
+  cpu.rom[0x0009]=0x3a;
+  cpu.rom[0x000a]=0x3c;
+  cpu.rom[0x000b]=0x28;
+  cpu.rom[0x000c]=0x0d;
+  cpu.rom[0x000d]=0x55;
+  cpu.rom[0x000e]=0x51;
+  cpu.rom[0x000f]=0x3e;
   struct timespec lt;
-  struct timespec nt, request = {0,104166L};
+  struct timespec nt, request = {0,1145833L};
   char c;
   struct pollfd pfd;
   bool isdebug=false;
@@ -881,4 +893,4 @@ int main(int argc, char** argv) {
   }
   return 0;
 }
-// g++ -Wall -Wfatal-errors -O2 -o main main.cpp
+// g++ -Wall -Wfatal-errors -Wextra -O2 -o main main.cpp
