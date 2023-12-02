@@ -158,7 +158,7 @@ class Assembler:
         lhs, rhs = line.split("=")
         lhs = lhs[1:]
         if lhs == "start":
-            current_address = self.compute(rhs)
+            self.current_address = self.compute(rhs)
         else:
             raise ValueError(f"Bad {self.current_line}: `{line}`")
 
@@ -215,6 +215,7 @@ class Assembler:
 
     def pass2(self) -> dict[int, int]:
         mem = dict()
+        self.current_address = -9999
         for i, line in enumerate(self.lines):
             self.current_line = i
             line = line.split(";")[0]
@@ -222,12 +223,15 @@ class Assembler:
             if not line:
                 continue
             if "=" in line:
+                if line[0] == ".":
+                    self.process_special(line)
                 continue
             elif line[-1] == ":":
                 continue
             else:
                 self.assemble_command(line, mem)
         return mem
+
 
 assembler = Assembler(lines)
 assembler.pass1()
