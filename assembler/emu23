@@ -7,7 +7,7 @@ if len(argv) > 1:
     infile = argv[1]
 if len(argv) > 2:
     outfile = argv[2]
-lines = map(lambda l: l.strip(), open(infile, "r").readlines())
+lines = list(map(lambda l: l.strip(), open(infile, "r").readlines()))
 
 
 COMMANDS = {
@@ -182,7 +182,7 @@ class Assembler:
             raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
         self.current_address += len(parts)
 
-    def assemble_command(self, line: str) -> dict[int, int]:
+    def assemble_command(self, line: str, mem: dict[int, int]):
         parts = line.split(" ")
         cmd = parts[0]
         if len(parts) > 2:
@@ -191,12 +191,10 @@ class Assembler:
             cmd += "i"
         if cmd not in COMMANDS:
             raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
-        result = dict()
-        result[self.current_address] = COMMANDS[cmd]
+        mem[self.current_address] = COMMANDS[cmd]
         if len(parts) == 2:
-            result[self.current_address + 1] = self.compute(parts[1])
+            mem[self.current_address + 1] = self.compute(parts[1])
         self.current_address += len(parts)
-        return result
 
     def pass1(self) -> None:
         for i, line in enumerate(self.lines):
@@ -228,5 +226,9 @@ class Assembler:
             elif line[-1] == ":":
                 continue
             else:
-                mem.update(*self.assemble_command(line))
+                self.assemble_command(line, mem)
         return mem
+
+assembler = Assembler(lines)
+assembler.pass1()
+print(assembler.pass2())
