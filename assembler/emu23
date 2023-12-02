@@ -140,7 +140,19 @@ class Assembler:
         self.lines = lines
 
     def compute(self, expr: str) -> int:
-        return int(expr)
+        try:
+            return int(expr, 16)
+        except:
+            pass
+        if expr.endswith(".l"):
+            return self.compute(expr[:-2]) & 0xFF
+        if expr.endswith(".h"):
+            return self.compute(expr[:-2]) >> 8
+        if expr in self.vars:
+            return self.vars[expr]
+        if expr in self.labels:
+            return self.labels[expr]
+        raise ValueError(f"Bad expression `{expr}` in line {self.current_line}")
 
     def process_special(self, line: str) -> None:
         lhs, rhs = line.split("=")
@@ -170,6 +182,22 @@ class Assembler:
             raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
         self.current_address += len(parts)
 
+    def assemble_command(self, line: str) -> dict[int, int]:
+        parts = line.split(" ")
+        cmd = parts[0]
+        if len(parts) > 2:
+            raise ValueError(f"Too many parts, line {self.current_line}, `{line}`")
+        if len(parts) == 2:
+            cmd += "i"
+        if cmd not in COMMANDS:
+            raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
+        result = dict()
+        result[self.current_address] = COMMANDS[cmd]
+        if len(parts) == 2:
+            result[self.current_address + 1] = self.compute(parts[1])
+        self.current_address += len(parts)
+        return result
+
     def pass1(self) -> None:
         for i, line in enumerate(self.lines):
             self.current_line = i
@@ -186,3 +214,19 @@ class Assembler:
                 self.process_label(line)
             else:
                 self.process_command(line)
+
+    def pass2(self) -> dict[int, int]:
+        mem = dict()
+        for i, line in enumerate(self.lines):
+            self.current_line = i
+            line = line.split(";")[0]
+            line = line.strip()
+            if not line:
+                continue
+            if "=" in line:
+                continue
+            elif line[-1] == ":":
+                continue
+            else:
+                mem.update(*self.assemble_command(line))
+        return mem
