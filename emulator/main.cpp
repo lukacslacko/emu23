@@ -11,6 +11,10 @@
 #include <string>
 #include <ctime>
 
+#define N_TTYS 4
+
+int TTY_FILENOS[N_TTYS];
+
 class CPU {
 public:
   CPU(uint32_t hertz, bool d=false) {
@@ -34,8 +38,9 @@ public:
       }
     }
   }
-  void addchar(char c) {
-    Char=c;
+  void addchar(char c, uint8_t tty=0) {
+    if (tty>=N_TTYS) return;
+    Char[tty]=c;
   }
   bool interrupt(char i) {
     if (i<0) {
@@ -77,9 +82,9 @@ public:
   }
   uint8_t rom[0x8000];
   bool dbg;
-private:
-  char Char;
   bool halted;
+private:
+  char Char[N_TTYS];
   uint32_t clockrate;
   uint8_t r0,r1,r2,r3,r4,r5,r6,r7,rC;
   uint8_t intc;
@@ -510,7 +515,7 @@ private:
         getImm();
       case 0x72://test
         flagZ=(A&B)==0;
-	return 2;
+        return 2;
     }
     fault(1,true);
     return 1;
@@ -537,8 +542,8 @@ private:
       return ram2[addr-0x020000];
     }
     if (addr==0x7fffff) {
-      char c=Char;
-      Char=0;
+      char c=Char[0];
+      Char[0]=0;
       return c;
     }
     fault(4,true);
@@ -828,6 +833,7 @@ uint32_t d(struct timespec *nt, struct timespec *lt) {
   return nanodiff;
 }
 int main(int argc, char** argv) {
+  TTY_FILENOS[0]=STDIN_FILENO;
   enableRawMode();
   CPU cpu = CPU(1000000L);
   cpu.rom[0]=0x01;
@@ -848,37 +854,40 @@ int main(int argc, char** argv) {
   cpu.rom[15]=0x0c;
   cpu.rom[16]=0x3e;
   struct timespec lt;
-  struct timespec nt, request = {0,104166L};
+  struct timespec nt, request = {0,1041667L};
   char c;
-  struct pollfd pfd;
+  struct pollfd pfds[N_TTYS];
   bool isdebug=false;
-  pfd.fd=STDIN_FILENO;
-  pfd.events=POLLIN;
+  pfds[0].fd=STDIN_FILENO;
+  pfds[0].events=POLLIN;
   clock_gettime(CLOCK_MONOTONIC,&lt);
-  for(;;) {
-    if (poll(&pfd,1,10)==-1) die("poll");
-    if(pfd.revents&POLLIN) {
-      if(read(STDIN_FILENO, &c, 1)==-1) die("read");
-      if (c==4) isdebug=true; else
-      if (isdebug) {
-        if (c=='q') break;
+  while (!cpu.halted) {
+    if (poll(pfds,N_TTYS,10)==-1) die("poll");
+    bool drc=false;
+    for (uint8_t tty=0; tty<N_TTYS; tty++)
+    if(pfds[tty].revents&POLLIN) {
+      if(read(TTY_FILENOS[tty], &c, 1)==-1) die("read");
+      if (tty==0&&isdebug) {
+        if (c=='q') return 0;
         if (c=='s') cpu.doInst();
-	if (c==4) {
-	  cpu.addchar(c);
-          nanosleep(&request,&nt);
-	}
-	if (c=='x') isdebug=false;
-	if (c=='b') cpu.dbg=true;
-	if (c=='c') cpu.dbg=false;
+        if (c==4) {
+          cpu.addchar(c,tty);
+          drc=true;
+        }
+        if (c=='x') isdebug=false;
+        if (c=='b') cpu.dbg=true;
+        if (c=='c') cpu.dbg=false;
       } else {
+        if (tty==0&&c==4) isdebug=true; else
         cpu.addchar(c);
-        nanosleep(&request,&nt);
+        drc=true;
       }
     }
+    if (drc) nanosleep(&request,&nt);
     clock_gettime(CLOCK_MONOTONIC,&nt);
     cpu.run(d(&nt,&lt));
     lt=nt;
   }
   return 0;
 }
-// g++ -Wall -Wfatal-errors -O2 -o main main.cpp
+// g++ -Wall -Wfatal-errors -Wextra -O2 -o main main.cpp
