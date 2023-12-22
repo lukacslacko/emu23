@@ -1,0 +1,238 @@
+#!/usr/bin/python3
+from sys import argv
+
+infile = "a.asm"
+outfile = "a.e23"
+if len(argv) > 1:
+    infile = argv[1]
+if len(argv) > 2:
+    outfile = argv[2]
+lines = list(map(lambda l: l.strip(), open(infile, "r").readlines()))
+
+
+COMMANDS = {
+    "ra0": 0x00,
+    "ra1": 0x01,
+    "ra2": 0x02,
+    "ra3": 0x03,
+    "ra4": 0x04,
+    "ra5": 0x05,
+    "ra6": 0x06,
+    "ra7": 0x07,
+    "rb0": 0x08,
+    "rb1": 0x09,
+    "rb3": 0x0B,
+    "rb4": 0x0C,
+    "rb5": 0x0D,
+    "rb6": 0x0E,
+    "rb7": 0x0F,
+    "addi": 0x10,
+    "add": 0x11,
+    "adci": 0x12,
+    "adc": 0x13,
+    "subi": 0x14,
+    "sub": 0x15,
+    "sbci": 0x16,
+    "sbc": 0x17,
+    "ori": 0x18,
+    "or": 0x19,
+    "xori": 0x1A,
+    "xor": 0x1B,
+    "andi": 0x1C,
+    "and": 0x1D,
+    "phf": 0x1E,
+    "plf": 0x1F,
+    "tabi": 0x20,
+    "tab": 0x21,
+    "tbai": 0x22,
+    "tba": 0x23,
+    "tca": 0x24,
+    "tcb": 0x25,
+    "taci": 0x26,
+    "tac": 0x27,
+    "tbci": 0x28,
+    "tbc": 0x29,
+    "phai": 0x2A,
+    "pha": 0x2B,
+    "phbi": 0x2C,
+    "phb": 0x2D,
+    "phc": 0x2E,
+    "pla": 0x2F,
+    "plb": 0x30,
+    "plc": 0x31,
+    "phs": 0x32,
+    "pls": 0x33,
+    "shri": 0x34,
+    "shr": 0x35,
+    "rori": 0x36,
+    "ror": 0x37,
+    "tcrab": 0x38,
+    "trabc": 0x39,
+    "tcrah": 0x3A,
+    "trahc": 0x3B,
+    "tcral": 0x3C,
+    "tralc": 0x3D,
+    "jmps": 0x3E,
+    "jmpl": 0x3F,
+    "calls": 0x40,
+    "calll": 0x41,
+    "rets": 0x42,
+    "retl": 0x43,
+    "rti": 0x44,
+    "brk": 0x45,
+    "sys": 0x46,
+    "sicc": 0x47,
+    "scc": 0x48,
+    "scs": 0x49,
+    "sics": 0x4A,
+    "sieq": 0x4B,
+    "seq": 0x4C,
+    "sine": 0x4D,
+    "sne": 0x4E,
+    "tic": 0x4F,
+    "tami": 0x50,
+    "tam": 0x51,
+    "tbmi": 0x52,
+    "tbm": 0x53,
+    "tcm": 0x54,
+    "tma": 0x55,
+    "tmb": 0x56,
+    "tmc": 0x57,
+    "hlt": 0x58,
+    "reset": 0x59,
+    "cmpi": 0x5A,
+    "cmp": 0x5B,
+    "tsbai": 0x5C,
+    "tsba": 0x5D,
+    "tcsbi": 0x5E,
+    "tcsb": 0x5F,
+    "tasbi": 0x60,
+    "tasb": 0x61,
+    "tsbci": 0x62,
+    "tsbc": 0x63,
+    "nop": 0x64,
+    "tcsph": 0x65,
+    "tcspl": 0x66,
+    "tsphc": 0x67,
+    "tsplc": 0x68,
+    "tcspb": 0x69,
+    "tspbc": 0x6A,
+    "tcispb": 0x6B,
+    "tispbc": 0x6C,
+    "tcpch": 0x6D,
+    "tcpcb": 0x6E,
+    "tpchc": 0x6F,
+    "tpcbc": 0x70,
+    "testi": 0x71,
+    "test": 0x72,
+}
+
+
+class Assembler:
+    vars: dict[str, int] = {}
+    labels: dict[str, int] = {}
+
+    current_address: int = 0
+    current_line: int = 0
+    lines: list[str]
+
+    def __init__(self, lines: list[str]):
+        self.lines = lines
+
+    def compute(self, expr: str) -> int:
+        try:
+            return int(expr, 16)
+        except:
+            pass
+        if expr.endswith(".l"):
+            return self.compute(expr[:-2]) & 0xFF
+        if expr.endswith(".h"):
+            return self.compute(expr[:-2]) >> 8
+        if expr in self.vars:
+            return self.vars[expr]
+        if expr in self.labels:
+            return self.labels[expr]
+        raise ValueError(f"Bad expression `{expr}` in line {self.current_line}")
+
+    def process_special(self, line: str) -> None:
+        lhs, rhs = line.split("=")
+        lhs = lhs[1:]
+        if lhs == "start":
+            self.current_address = self.compute(rhs)
+        else:
+            raise ValueError(f"Bad {self.current_line}: `{line}`")
+
+    def process_var(self, line: str) -> None:
+        lhs, rhs = line.split("=")
+        if lhs in self.vars:
+            raise ValueError(f"Redefining {lhs}, line: {self.current_line}, `{line}`")
+        self.vars[lhs] = self.compute(rhs)
+
+    def process_label(self, line: str) -> None:
+        self.labels[line[:-1]] = self.current_address
+
+    def process_command(self, line: str) -> None:
+        parts = line.split(" ")
+        cmd = parts[0]
+        if len(parts) > 2:
+            raise ValueError(f"Too many parts, line {self.current_line}, `{line}`")
+        if len(parts) == 2:
+            cmd += "i"
+        if cmd not in COMMANDS:
+            raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
+        self.current_address += len(parts)
+
+    def assemble_command(self, line: str, mem: dict[int, int]):
+        parts = line.split(" ")
+        cmd = parts[0]
+        if len(parts) > 2:
+            raise ValueError(f"Too many parts, line {self.current_line}, `{line}`")
+        if len(parts) == 2:
+            cmd += "i"
+        if cmd not in COMMANDS:
+            raise ValueError(f"Bad command {cmd}, line {self.current_line}, `{line}`")
+        mem[self.current_address] = COMMANDS[cmd]
+        if len(parts) == 2:
+            mem[self.current_address + 1] = self.compute(parts[1])
+        self.current_address += len(parts)
+
+    def pass1(self) -> None:
+        for i, line in enumerate(self.lines):
+            self.current_line = i
+            line = line.split(";")[0]
+            line = line.strip()
+            if not line:
+                continue
+            if "=" in line:
+                if line[0] == ".":
+                    self.process_special(line)
+                else:
+                    self.process_var(line)
+            elif line[-1] == ":":
+                self.process_label(line)
+            else:
+                self.process_command(line)
+
+    def pass2(self) -> dict[int, int]:
+        mem = dict()
+        self.current_address = -9999
+        for i, line in enumerate(self.lines):
+            self.current_line = i
+            line = line.split(";")[0]
+            line = line.strip()
+            if not line:
+                continue
+            if "=" in line:
+                if line[0] == ".":
+                    self.process_special(line)
+                continue
+            elif line[-1] == ":":
+                continue
+            else:
+                self.assemble_command(line, mem)
+        return mem
+
+
+assembler = Assembler(lines)
+assembler.pass1()
+print(assembler.pass2())
