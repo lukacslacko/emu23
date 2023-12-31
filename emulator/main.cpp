@@ -515,7 +515,7 @@ private:
         getImm();
       case 0x72://test
         flagZ=(A&B)==0;
-	return 2;
+        return 2;
     }
     fault(1,true);
     return 1;
@@ -546,14 +546,12 @@ private:
       Char=0;
       return c;
     }
-    fault(4,true);
     return 0;
   }
   void physwrite(uint32_t addr, uint8_t data, bool islow=false) {
     if (islow) {
       if ((addr&0xff0000L)==0) {
         if (addr<0x8000) {
-          fault(4,true);
           return;
         }
         if (addr<0xc000) {
@@ -580,7 +578,6 @@ private:
       if (data) if(::write(STDOUT_FILENO, (void*)&data, 1)!=1) die("write");
       return;
     }
-    fault(4,true);
   }
   uint8_t pread() {
     if (PC<0x800000L) {
@@ -875,13 +872,13 @@ int main(int argc, char** argv) {
       if (isdebug) {
         if (c=='q') break;
         if (c=='s') cpu.doInst();
-	if (c==4) {
-	  cpu.addchar(c);
+        if (c==4) {
+          cpu.addchar(c);
           nanosleep(&request,&nt);
-	}
-	if (c=='x') isdebug=false;
-	if (c=='b') cpu.dbg=true;
-	if (c=='c') cpu.dbg=false;
+        }
+        if (c=='x') isdebug=false;
+        if (c=='b') cpu.dbg=true;
+        if (c=='c') cpu.dbg=false;
       } else {
         cpu.addchar(c);
         nanosleep(&request,&nt);
