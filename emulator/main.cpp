@@ -51,7 +51,7 @@ public:
       return false;
     }
     if (!flagI) {
-      fault(0x80+i,false,true);
+      fault(0x80+i,true,true);
     }
     return !flagI;
   }
@@ -343,13 +343,13 @@ private:
         }
       case 0x45://brk
         if (!flagI) {
-          fault(2,true);
+          fault(2,true,true);
           return 1;
         }
         dbg=true;
         return 2;
       case 0x46://sys
-        fault(0,true);
+        fault(0,true,true);
         return 1;
       case 0x47://sicc
         if (!flagC) {
